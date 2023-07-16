@@ -1,115 +1,138 @@
 package com.epam.rd.autocode.hashtableopen816;
 
+import com.google.common.primitives.Ints;
+
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 
 public class HashTable implements HashtableOpen8to16 {
-    private int bucketSize;
-    private ArrayList<HashNode> bucketArray; //Hashtable
-    private HashNode bucket; //Node
-
+    private HashNode[] buckets;
+    private int numOfBuckets;
+    private int size;
     public HashTable(){
-        this.bucketSize = 8;
-        bucketArray = new ArrayList<>();
-
+        this.numOfBuckets = 8;
+        buckets = new HashNode[numOfBuckets];
     }
 
     @Override
     public void insert(int key, Object value) {
-        System.out.println("bucket size before adding an element: " + bucketSize);
-        int bucketIndex = hashCode(key);
-        for(HashNode currentBucket : bucketArray){
-            if(currentBucket != null && currentBucket.key == bucketIndex){
-                currentBucket.values.add(value);
-                return;
-            }else if(currentBucket == null){
-                bucketArray.removeIf(Objects::isNull);
-                currentBucket = new HashNode(bucketIndex, new ArrayList<>());
-                currentBucket.values.add(value);
-                bucketArray.add(currentBucket);
-                System.out.println("added new bucket");
+        int bucketIndex = getBucketIndex(key);
+        HashNode head = buckets[bucketIndex];
+        while(head != null){
+            if (head.key.equals(key)){
+                head.value = value;
                 return;
             }
+            head = head.next;
         }
-        HashNode newBucket = new HashNode(bucketIndex, new ArrayList<>());
-        newBucket.values.add(value);
-        bucketArray.add(newBucket);
-        System.out.println("bucket array before resize: " + bucketArray.size());
-        resize(bucketArray);
-        System.out.println("bucket array: " + bucketArray.size());
+        size++;
+        head = buckets[bucketIndex];
+        HashNode node = new HashNode(key,value);
+        node.next = head;
+        buckets[bucketIndex] = node;
+        if (this.size == this.numOfBuckets) {
+            resize(2 * this.numOfBuckets); // Double the capacity
+        }
     }
 
     @Override
     public Object search(int key) {
+        int bucketIndex = getBucketIndex(key);
+        HashNode head = buckets[bucketIndex];
+        while(head != null){
+            if (head.key == key){
+                return head.value;
+            }
+            head = head.next;
+        }
         return null;
     }
 
     @Override
     public void remove(int key) {
+        int bucketIndex = getBucketIndex(key);
+        HashNode head = buckets[bucketIndex];
+        HashNode previous = null;
+        while(head != null){
+            if (head.key == key){
+                break;
+            }
+            previous = head;
+            head = head.next;
+        }
+        if (head == null){
+            return;
+        }
+        size--;
+        if (previous != null){
+            previous.next = head.next;
+        }else {
+            buckets[bucketIndex] = head.next;
+        }
 
+        if (this.numOfBuckets > 8 && this.size <= this.numOfBuckets / 4) {
+            resize(this.numOfBuckets / 2); // Halve the capacity
+        }
     }
 
     @Override
     public int size() {
-        return this.bucketSize;
+        return this.size;
     }
 
-    public List<HashNode> resize(List<HashNode> bucketArray){
-        bucketSize++;
-        if(this.bucketArray.size() == 1){
-            bucketSize = 2;
-            for(int i = bucketArray.size()-1; i < bucketSize-1; i++){
-                bucketArray.add(null);
-            }
-        } else if (this.bucketArray.size() == 3) {
-            bucketSize = 4;
-            for(int i = bucketArray.size()-1; i < bucketSize; i++){
-                bucketArray.add(null);
-            }
-        } else if (this.bucketArray.size() > 4 && this.bucketArray.size() < 8) {
-            bucketSize = 8;
-            for(int i = bucketArray.size()-1; i < bucketSize; i++){
-                bucketArray.add(null);
-            }
-        } else if (this.bucketArray.size() > 8 && this.bucketArray.size() < 16) {
-            bucketSize = 16;
-            for(int i = bucketArray.size()-1; i < bucketSize; i++){
-                bucketArray.add(null);
-            }
-        } else if(this.bucketArray.size() > 16){
-            throw new IllegalStateException();
-        }
 
-        return bucketArray;
+
+    public void resize(int newCapacity){
+        HashNode[] newBucketsArray = new HashNode[newCapacity];
+
+        for (HashNode node : this.buckets){
+            while (node != null){
+                int bucketIndex = node.key % newCapacity;
+
+                HashNode newNode = new HashNode(node.key, node.value);
+                newNode.next = newBucketsArray[bucketIndex];
+                newBucketsArray[bucketIndex] = newNode;
+
+                node = node.next;
+            }
+        }
+        this.buckets = newBucketsArray;
+        this.numOfBuckets = newCapacity;
     }
 
     @Override
     public int[] keys() {
-        return new int[0];
+        ArrayList<Integer> keysArray = new ArrayList<>();
+        for(HashNode node : buckets){
+            if(node != null)
+            keysArray.add(node.key);
+        }
+        return Ints.toArray(keysArray);
     }
 
-    public int hashCode(int key){
-        return key%this.bucketSize;
+    public int getBucketIndex(int key){
+        return key % numOfBuckets;
     }
+
+
 
     public static void main(String[] args) {
-        HashTable hashTable = new HashTable();
-        System.out.println("Starting array size: " + hashTable.bucketSize);
-        hashTable.insert(1,10);
-        hashTable.insert(1,10);
-        hashTable.insert(2,10);
+        HashTable table = new HashTable();
 
-        System.out.println("after adding element size: " + hashTable.bucketSize);
-        for (HashNode bucket : hashTable.bucketArray){
-            if(bucket != null){
-                System.out.println("keys: " + bucket.key);
-            }else{
-                System.out.println("found null bucket");
-            }
+        table.insert(1, "Tom");
+        table.insert(2, "Harry");
+        table.insert(3, "Dinesh");
+        table.insert(4, "blah");
+        table.insert(5, "blah");
+        table.insert(6, "blah");
+        table.insert(7, "blah");
+        table.insert(8, "blah");
+        table.insert(9, "blah");
+        table.insert(10, "blah");
 
-        }
-        System.out.println("Ending array size: " + hashTable.bucketSize);
+        System.out.println(table.size());
+
+
+
     }
 }

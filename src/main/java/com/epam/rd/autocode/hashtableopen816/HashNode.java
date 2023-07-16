@@ -3,12 +3,13 @@ package com.epam.rd.autocode.hashtableopen816;
 import java.util.ArrayList;
 
 public class HashNode {
-    int key;
-    ArrayList<Object> values;
+    protected Integer key;
+    protected Object value;
+    protected HashNode next;
 
-    public HashNode(int key, ArrayList<Object> values){
+    public HashNode(int key, Object value){
         this.key = key;
-        this.values = values;
+        this.value = value;
     }
 
 }
