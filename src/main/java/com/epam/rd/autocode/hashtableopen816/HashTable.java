@@ -150,15 +150,11 @@ public class HashTable implements HashtableOpen8to16 {
             System.out.println(i);
         }
 
-//        int i = 0;
-//        for (HashNode bucket:
-//                table.buckets) {
-//            while(bucket != null){
-//                System.out.println(i + " " + bucket.key);
-//                bucket = bucket.next;
-//            }
-//            i++;
-//        }
+        table.remove(77);
+
+        for(int i : table.keys()){
+            System.out.println(i);
+        }
 
         System.out.println(table.size());
 
