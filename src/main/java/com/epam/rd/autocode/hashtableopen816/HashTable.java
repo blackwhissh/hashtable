@@ -1,86 +1,97 @@
 package com.epam.rd.autocode.hashtableopen816;
 
+import java.util.Arrays;
+
 public class HashTable implements HashtableOpen8to16 {
-    private HashNode[] buckets;
-    private int numOfBuckets;
-    static final double DEFAULT_LOAD_FACTOR = 0.75;
-    int[] keysArray;
-    HashNode dummy;
-    static final double DELETION_LOAD_FACTOR = 0.75;
+    private int capacity;
     private int size;
-    public HashTable(){
-        this.numOfBuckets = 8;
-        buckets = new HashNode[numOfBuckets];
-        this.dummy = new HashNode(0, -1);
+    private static final int MAX_SIZE = 16;
+    private HashNode[] hashNode;
+
+    public HashTable() {
+        super();
+        this.capacity = 8;
+        this.size = 0;
+        this.hashNode = new HashNode[this.capacity];
     }
 
     @Override
     public void insert(int key, Object value) {
-        HashNode temp = new HashNode(key,value);
-        int nextSize = buckets.length + 1;
-        int hashIndex = getBucketIndex(key);
+        if (search(key) != null) {
+            return;
+        }
 
-        while(this.buckets[hashIndex] != null && this.buckets[hashIndex].key != key && this.buckets[hashIndex].key != 0){
+        if (this.size >= MAX_SIZE) throw new IllegalStateException();
+        if (size == capacity) {
+            capacity *= 2;
+            resize(capacity / 2, capacity);
+        }
+
+        HashNode temp = new HashNode(key, value);
+
+        int hashIndex = hashCode(key);
+
+        while (hashNode[hashIndex] != null && hashNode[hashIndex].getKey() != key) {
             hashIndex++;
-            hashIndex %= this.numOfBuckets;
+            hashIndex %= capacity;
         }
 
-        if(this.buckets[hashIndex] == null || this.buckets[hashIndex].key == 0){
-            this.size++;
-            if(this.size > 16){
-                throw new IllegalStateException();
-            }
-        }
-        this.buckets[hashIndex] = temp;
-
-        if(nextSize == 5 || nextSize == 9){
-            rehashInsert();
+        if (hashNode[hashIndex] == null) {
+            size++;
         }
 
+        this.hashNode[hashIndex] = temp;
     }
 
     @Override
     public Object search(int key) {
-        int hashIndex = getBucketIndex(key);
+        int hashIndex = hashCode(key);
+
         int counter = 0;
-        // finding the node with given key
-        while (this.buckets[hashIndex] != null) {
-            // If counter is greater than capacity to avoid infinite loop
-            if (counter > this.numOfBuckets) {
-                return -1;
+        while (this.hashNode[hashIndex] != null) {
+            if (counter > this.capacity) {
+                return null;
             }
-            // if node found return its value
-            if (this.buckets[hashIndex].key == key) {
-                return this.buckets[hashIndex].value;
+            if (hashNode[hashIndex].getKey() == key){
+                return hashNode[hashIndex].getValue();
             }
             hashIndex++;
-            hashIndex %= this.numOfBuckets;
+            hashIndex %= this.capacity;
             counter++;
         }
-        // If not found return 0
+        if (hashNode[hashIndex] == null){
+            for (HashNode node : hashNode){
+                if (node != null && (node.getKey() == key)){
+                        return node.getValue();
+
+                }
+            }
+        }
         return null;
     }
 
     @Override
     public void remove(int key) {
+        int hashIndex = hashCode(key);
+        int index = hashIndex;
 
-        int hashIndex = getBucketIndex(key);
+        while (hashNode[hashIndex] == null || hashNode[hashIndex].getKey() != key) {
 
-        while (this.buckets[hashIndex] != null) {
-
-            if (this.buckets[hashIndex].key == key) {
-
-                this.buckets[hashIndex] = this.dummy;
-
-                this.size--;
-
-            }
             hashIndex++;
-            hashIndex %= this.numOfBuckets;
+            hashIndex %= this.capacity;
+
+            if (hashIndex == capacity) hashIndex = 0;
+
+            if (hashIndex == index) return;
         }
 
+        hashNode[hashIndex] = null;
+        this.size--;
 
-
+        if (size * 4 <= capacity && capacity != 2) {
+            capacity = capacity / 2;
+            resize(capacity * 2, capacity);
+        }
     }
 
     @Override
@@ -90,75 +101,27 @@ public class HashTable implements HashtableOpen8to16 {
 
     @Override
     public int[] keys() {
-        keysArray = new int[numOfBuckets];
-        for(int i = 0; i < numOfBuckets; i++){
-            if(buckets[i] == null){
-                keysArray[i] = 0;
-            }else{
-                keysArray[i] = buckets[i].key;
+        int[] array = new int[capacity];
+        for (int i = 0; i < capacity; i++) {
+            if (hashNode[i] != null) {
+                array[i] = hashNode[i].getKey();
             }
         }
-
-        return keysArray;
+        return array;
     }
 
-    public int getBucketIndex(int key){
-        if(key < 0){
-            return key%numOfBuckets*-1;
-        }
-        return key % numOfBuckets;
+    public int hashCode(int key) {
+        if (key < 0) key = -key;
+        return key % this.capacity;
     }
 
-    private void rehashInsert(){
+    public void resize(int capacity, int newCapacity) {
+        HashNode[] tempCapacity = Arrays.copyOf(this.hashNode, capacity);
+        this.hashNode = new HashNode[newCapacity];
 
-        HashNode[] temp = buckets;
-        buckets = new HashNode[numOfBuckets*2];
-
-        size = 0;
-        numOfBuckets *= 2;
-
-        for (HashNode hashNode : temp) {
-            HashNode head = hashNode;
-
-            while (head != null) {
-                int key = head.key;
-                Object value = head.value;
-
-                insert(key, value);
-                head = head.next;
-            }
-        }
-
+        size = 0;//push against
+        for (int i = 0; i < capacity; i++)
+            if (tempCapacity[i] != null) insert(tempCapacity[i].getKey(), tempCapacity[i].getValue());
     }
 
-    public static void main(String[] args) {
-        HashTable table = new HashTable();
-
-        table.insert(-74, "Tom");
-        table.insert(98, "Tom");
-        table.insert(-44, "blas");
-        table.insert(75, "Tom");
-        table.insert(-27, "Tom");
-        table.insert(76, "blas");
-        table.insert(-33, "Tom");
-        table.insert(42, "Tom");
-        table.insert(-71, "Tom");
-        table.insert(77, "Tom");
-
-
-        for(int i : table.keys()){
-            System.out.println(i);
-        }
-
-        table.remove(77);
-
-        for(int i : table.keys()){
-            System.out.println(i);
-        }
-
-        System.out.println(table.size());
-
-
-
-    }
 }
